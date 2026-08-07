@@ -83,6 +83,7 @@ private:
     struct SpawnRender {
         SmoothedPos        pos;
         seq::v1::SpawnType type{seq::v1::SPAWN_UNSPECIFIED};
+        quint32            level{0};
     };
     QHash<quint32, SpawnRender> m_spawns;
 
@@ -92,6 +93,7 @@ private:
     bool        m_havePlayer{false};
     SmoothedPos m_playerPos;
     int         m_playerHeading{0};
+    quint32     m_playerLevel{0};
 
     // Wall clock for interpolation timestamps + render-tick timer that
     // drives ~60 Hz repaints while anything is mid-lerp. Stops itself

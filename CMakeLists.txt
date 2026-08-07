@@ -77,6 +77,7 @@ set(SOURCES
   src/daemon/SpawnModel.cpp
   src/daemon/ZoneState.cpp
   src/daemon/PlayerState.cpp
+  src/util/ConColor.cpp
   src/widgets/SpawnListWidget.cpp
   src/widgets/MapWidget.cpp
   src/widgets/CompassWidget.cpp
@@ -105,6 +106,19 @@ target_link_libraries(showeq-qt PRIVATE
 # On Windows set the executable subsystem to Windows (no console window).
 if(WIN32)
   set_target_properties(showeq-qt PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()
+
+# --- tests ------------------------------------------------------------------
+# Qt6::Test ships with qtbase but isn't guaranteed on every packaging
+# split, so the test target is opt-in on its presence rather than a hard
+# requirement for building the app.
+find_package(Qt6 6.2 QUIET COMPONENTS Test)
+if(Qt6Test_FOUND)
+  enable_testing()
+  add_executable(concolor_test tests/concolor_test.cpp src/util/ConColor.cpp)
+  target_include_directories(concolor_test PRIVATE "${CMAKE_SOURCE_DIR}/src")
+  target_link_libraries(concolor_test PRIVATE Qt6::Core Qt6::Gui Qt6::Test)
+  add_test(NAME concolor COMMAND concolor_test)
 endif()
 
 # --- install rules (used by .deb CPack and AppImage packaging) --------------

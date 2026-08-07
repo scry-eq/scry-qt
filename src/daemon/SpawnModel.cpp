@@ -1,6 +1,9 @@
 #include "SpawnModel.h"
 #include "daemon/ZoneState.h"
+#include "util/ConColor.h"
 #include <QColor>
+#include <QImage>
+#include <QPainter>
 #include <QTimer>
 #include <climits>
 #include <cmath>
@@ -25,7 +28,37 @@ static QString raceName(uint32_t race) {
     return QString::number(race);
 }
 
+// Con swatch, mirroring showeq-web's 10px ring-bordered dot. Cached per
+// band — data() is called for every visible cell on every repaint, and
+// painting a fresh pixmap each time would be pure waste.
+// QImage rather than QPixmap: the cache outlives QApplication, and a
+// QPixmap destroyed after GUI teardown is a known Qt footgun.
+static QImage conDot(Con c) {
+    static QHash<int, QImage> cache;
+    const int key = static_cast<int>(c);
+    auto it = cache.constFind(key);
+    if (it != cache.constEnd())
+        return it.value();
+
+    QImage pm(10, 10, QImage::Format_ARGB32_Premultiplied);
+    pm.fill(Qt::transparent);
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setBrush(conColor(c));
+    p.setPen(QPen(QColor(0xff, 0xff, 0xff, 0x40), 1));
+    p.drawEllipse(QRectF(0.5, 0.5, 9.0, 9.0));
+    p.end();
+    cache.insert(key, pm);
+    return pm;
+}
+
 SpawnModel::SpawnModel(QObject* parent) : QAbstractTableModel(parent) {}
+
+quint32 SpawnModel::playerLevel() const {
+    if (m_playerId == 0) return 0;
+    const int row = indexOf(m_playerId);
+    return row < 0 ? 0 : m_rows[row].level;
+}
 
 int SpawnModel::rowCount(const QModelIndex&) const { return m_rows.size(); }
 int SpawnModel::columnCount(const QModelIndex&) const { return ColCount; }
@@ -34,6 +67,7 @@ QVariant SpawnModel::headerData(int section, Qt::Orientation orientation, int ro
     if (orientation != Qt::Horizontal || role != Qt::DisplayRole)
         return {};
     switch (section) {
+    case ColCon:   return "";
     case ColName:  return "Name";
     case ColLevel: return "Lvl";
     case ColClass: return "Class";
@@ -56,6 +90,10 @@ QVariant SpawnModel::data(const QModelIndex& index, int role) const {
     // numerically (set sortRole = EditRole on the proxy).
     if (role == Qt::EditRole) {
         switch (index.column()) {
+        // Sorts grey -> red, i.e. ascending threat.
+        case ColCon:   return static_cast<int>(
+                           conOf(static_cast<int>(playerLevel()),
+                                 static_cast<int>(r.level)));
         case ColLevel: return r.level;
         case ColHP:    return r.hpMax > 0 ? (100.0 * r.hpCur / r.hpMax) : -1.0;
         case ColDist:  {
@@ -90,13 +128,27 @@ QVariant SpawnModel::data(const QModelIndex& index, int role) const {
         case ColZ:     return QString::number(r.z, 'f', 1);
         }
     }
+    // Con swatch. Matches showeq-web, where the leading dot carries the
+    // con and the row text stays neutral — type is read off the Class
+    // column and the map glyph, not the text color.
+    if (role == Qt::DecorationRole && index.column() == ColCon)
+        return conDot(conOf(static_cast<int>(playerLevel()),
+                            static_cast<int>(r.level)));
+
     if (role == Qt::ForegroundRole) {
+        // Corpses stay dimmed so they read as objects rather than threats
+        // (the map draws them as hollow outline glyphs for the same reason).
         switch (r.type) {
-        case seq::v1::PC:         return QColor(Qt::cyan);
         case seq::v1::CORPSE_PC:  return QColor(Qt::gray);
         case seq::v1::CORPSE_NPC: return QColor(Qt::darkGray);
-        default:                  return QColor(Qt::white);
+        default: break;
         }
+        // Con-colored row text, as legacy showeq does it
+        // (spawnlistcommon.cpp: m_textColor = pickConColor). Legacy also
+        // darkens yellow and swaps white for the default text color, both
+        // for light backgrounds; this list is dark, so the palette stands.
+        return conColorOf(static_cast<int>(playerLevel()),
+                          static_cast<int>(r.level));
     }
     return {};
 }
@@ -167,9 +219,14 @@ void SpawnModel::applySpawnUpdated(const seq::v1::SpawnUpdated& msg) {
     if (msg.has_name())   r.name  = QString::fromStdString(msg.name());
 
     scheduleRowDirty(row);
-    // Player moved → every other row's distance is now stale.
-    if (msg.has_pos() && msg.id() == m_playerId)
-        m_dirtyAllDistances = true;
+    if (msg.id() == m_playerId) {
+        // Player moved → every other row's distance is now stale.
+        if (msg.has_pos())
+            m_dirtyAllDistances = true;
+        // Player dinged → every other row's con is now stale.
+        if (msg.has_level())
+            m_dirtyAllCons = true;
+    }
 }
 
 void SpawnModel::applySpawnRemoved(quint32 id) {
@@ -226,5 +283,12 @@ void SpawnModel::flushDirtyRows() {
         emit dataChanged(index(0, ColDist),
                          index(m_rows.size() - 1, ColDist));
         m_dirtyAllDistances = false;
+    }
+    // A ding re-cons every spawn, and con drives the whole row's text
+    // color — not just the swatch — so this spans all columns.
+    if (m_dirtyAllCons && !m_rows.isEmpty()) {
+        emit dataChanged(index(0, 0),
+                         index(m_rows.size() - 1, ColCount - 1));
+        m_dirtyAllCons = false;
     }
 }

@@ -36,6 +36,7 @@ SpawnListWidget::SpawnListWidget(SpawnModel* model, QWidget* parent)
     // it on subsequent launches.
     m_view->header()->setSectionResizeMode(QHeaderView::Interactive);
     m_view->header()->setStretchLastSection(true);
+    m_view->setColumnWidth(SpawnModel::ColCon, 24);
     m_view->setColumnWidth(SpawnModel::ColName, 220);
     // Critical perf knob at high spawn counts: with uniform row heights
     // QTreeView's itemHeight/coordinateForItem become O(1) instead of

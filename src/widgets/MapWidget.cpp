@@ -1,6 +1,7 @@
 #include "MapWidget.h"
 #include "app/Settings.h"
 #include "daemon/ZoneState.h"
+#include "util/ConColor.h"
 #include <QColor>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsItemGroup>
@@ -165,10 +166,12 @@ void MapWidget::applySnapshot(const seq::v1::Snapshot& snap) {
             m_havePlayer = true;
             m_playerPos.snapTo(x, y, now);
             m_playerHeading = s.pos().heading();
+            m_playerLevel = s.level();
         } else {
             SpawnRender sr;
             sr.pos.snapTo(x, y, now);
             sr.type = s.type();
+            sr.level = s.level();
             m_spawns.insert(s.id(), sr);
         }
     }
@@ -185,34 +188,45 @@ void MapWidget::applySpawnAdded(const seq::v1::SpawnAdded& msg) {
         m_havePlayer = true;
         m_playerPos.snapTo(x, y, now);
         m_playerHeading = s.pos().heading();
+        m_playerLevel = s.level();
     } else {
         SpawnRender sr;
         sr.pos.snapTo(x, y, now);
         sr.type = s.type();
+        sr.level = s.level();
         m_spawns.insert(s.id(), sr);
     }
     viewport()->update();
 }
 
 void MapWidget::applySpawnUpdated(const seq::v1::SpawnUpdated& msg) {
-    if (!msg.has_pos()) return;
-    float x = ZoneState::toWorld(msg.pos().x());
-    float y = ZoneState::toWorld(msg.pos().y());
     const qint64 now = m_animClock.elapsed();
+
+    // A level-only update carries no pos, but still changes what color
+    // this spawn (or, for the player, every spawn) cons at.
     if (msg.id() == m_playerId) {
-        if (m_havePlayer) {
-            m_playerPos.retarget(x, y, now);
-        } else {
-            m_havePlayer = true;
-            m_playerPos.snapTo(x, y, now);
+        if (msg.has_level()) m_playerLevel = msg.level();
+        if (msg.has_pos()) {
+            float x = ZoneState::toWorld(msg.pos().x());
+            float y = ZoneState::toWorld(msg.pos().y());
+            if (m_havePlayer) {
+                m_playerPos.retarget(x, y, now);
+            } else {
+                m_havePlayer = true;
+                m_playerPos.snapTo(x, y, now);
+            }
+            m_playerHeading = msg.pos().heading();
         }
-        m_playerHeading = msg.pos().heading();
     } else {
         auto it = m_spawns.find(msg.id());
         if (it == m_spawns.end()) return;
-        it->pos.retarget(x, y, now);
+        if (msg.has_level()) it->level = msg.level();
+        if (msg.has_pos()) {
+            it->pos.retarget(ZoneState::toWorld(msg.pos().x()),
+                             ZoneState::toWorld(msg.pos().y()), now);
+        }
     }
-    if (!m_renderTimer->isActive()) m_renderTimer->start();
+    if (msg.has_pos() && !m_renderTimer->isActive()) m_renderTimer->start();
     viewport()->update();
 }
 
@@ -242,12 +256,17 @@ void MapWidget::centerOnSpawn(quint32 id) {
     centerOn(eqToScene(static_cast<float>(p.x()), static_cast<float>(p.y())));
 }
 
+// Fallback fill for con-colored glyphs when a level is unknown (either
+// ours or theirs). Palette matches showeq-web's COLOR_BY_TYPE.
 QColor MapWidget::colorForSpawnType(seq::v1::SpawnType type) {
     switch (type) {
-    case seq::v1::PC:         return Qt::cyan;
-    case seq::v1::CORPSE_PC:  return Qt::gray;
-    case seq::v1::CORPSE_NPC: return Qt::darkGray;
-    default:                  return Qt::red;
+    case seq::v1::PC:         return QColor(0x6e, 0xc4, 0xff);
+    case seq::v1::NPC:        return QColor(0xff, 0x6b, 0x6b);
+    case seq::v1::CORPSE_PC:  return QColor(0x70, 0x70, 0xa0);
+    case seq::v1::CORPSE_NPC: return QColor(0x70, 0x60, 0x60);
+    case seq::v1::DOOR:       return QColor(0xc0, 0xc0, 0xc0);
+    case seq::v1::DROP:       return QColor(0xff, 0xe0, 0x66);
+    default:                  return QColor(0xff, 0xff, 0xff);
     }
 }
 
@@ -321,31 +340,96 @@ void MapWidget::drawForeground(QPainter* painter, const QRectF& sceneRect) {
     // ===== Player FoV (scene coords) + dot (pixel coords) =====
     drawPlayerMarker(painter);
 
-    // ===== Batched spawn dots =====
-    // One drawPoints call per color — handles thousands of spawns
-    // cheaply. RoundCap + thick pen turns each "point" into a filled
-    // circle of (penWidth) pixels. mapFromScene is a 2D matrix multiply,
-    // negligible per-spawn even at 5000+.
+    // ===== Spawn glyphs =====
+    // Per-type marker glyph, mirroring showeq-web's MapCanvas (which in
+    // turn ports showeq-c's MapIcons table). NPCs and live PCs carry a
+    // con-colored fill; corpses/doors/drops are fixed-color outline
+    // glyphs so they read as objects, not threats.
+    //
+    // NPCs are the only populous type, so they keep the batched
+    // drawPoints path — one call per con color, a RoundCap pen of width
+    // 6 turning each "point" into a filled 6px circle. The handful of
+    // other glyphs are drawn individually; there are tens of them, not
+    // thousands.
     if (!m_spawns.isEmpty()) {
         const qint64 now = m_animClock.elapsed();
-        QHash<QRgb, QVector<QPointF>> byColor;
-        byColor.reserve(4);
+        QHash<QRgb, QVector<QPointF>> npcByColor;
+        npcByColor.reserve(8);
+        struct Glyph { QPoint at; seq::v1::SpawnType type; QColor fill; };
+        QVector<Glyph> glyphs;
+
         for (auto it = m_spawns.constBegin(); it != m_spawns.constEnd(); ++it) {
             const QPointF p = it->pos.posAt(now);
             const QPoint vp = mapFromScene(eqToScene(static_cast<float>(p.x()),
                                                      static_cast<float>(p.y())));
-            byColor[colorForSpawnType(it->type).rgb()].push_back(vp);
+            const QColor fill =
+                (m_playerLevel > 0 && it->level > 0)
+                    ? conColorOf(static_cast<int>(m_playerLevel),
+                                 static_cast<int>(it->level))
+                    : colorForSpawnType(it->type);
+
+            // Until the player is identified (player_id only arrives in
+            // the Snapshot), don't single PCs out as "other players" —
+            // our own character is a PC and would otherwise flash as a
+            // magenta square. Render PCs as plain con dots until then.
+            seq::v1::SpawnType glyphType = it->type;
+            if (glyphType == seq::v1::PC && !m_havePlayer)
+                glyphType = seq::v1::NPC;
+
+            if (glyphType == seq::v1::NPC || glyphType == seq::v1::SPAWN_UNSPECIFIED)
+                npcByColor[fill.rgb()].push_back(vp);
+            else
+                glyphs.push_back({vp, glyphType, fill});
         }
 
         painter->save();
         painter->resetTransform();
+
         QPen dotPen;
         dotPen.setCapStyle(Qt::RoundCap);
         dotPen.setWidth(6);  // ~3px radius — matches showeq-web
-        for (auto it = byColor.constBegin(); it != byColor.constEnd(); ++it) {
+        for (auto it = npcByColor.constBegin(); it != npcByColor.constEnd(); ++it) {
             dotPen.setColor(QColor::fromRgb(it.key()));
             painter->setPen(dotPen);
             painter->drawPoints(it.value().constData(), it.value().size());
+        }
+
+        for (const Glyph& g : glyphs) {
+            const int x = g.at.x(), y = g.at.y();
+            switch (g.type) {
+            case seq::v1::PC:
+                // Square, con fill, magenta outline.
+                painter->setPen(QPen(QColor(0xff, 0x00, 0xff), 1));
+                painter->setBrush(g.fill);
+                painter->drawRect(x - 3, y - 3, 6, 6);
+                break;
+            case seq::v1::CORPSE_PC:
+                // Hollow yellow square, thick border, no fill.
+                painter->setPen(QPen(QColor(0xff, 0xff, 0x00), 2));
+                painter->setBrush(Qt::NoBrush);
+                painter->drawRect(x - 3, y - 3, 6, 6);
+                break;
+            case seq::v1::CORPSE_NPC:
+                // Cyan plus.
+                painter->setPen(QPen(QColor(0x00, 0xff, 0xff), 1));
+                painter->drawLine(x, y - 3, x, y + 3);
+                painter->drawLine(x - 3, y, x + 3, y);
+                break;
+            case seq::v1::DOOR:
+                // Tiny hollow brown square.
+                painter->setPen(QPen(QColor(0x6e, 0x3c, 0x00), 1));
+                painter->setBrush(Qt::NoBrush);
+                painter->drawRect(x - 1, y - 1, 2, 2);
+                break;
+            case seq::v1::DROP:
+                // Yellow X.
+                painter->setPen(QPen(QColor(0xff, 0xff, 0x00), 1));
+                painter->drawLine(x - 3, y - 3, x + 3, y + 3);
+                painter->drawLine(x - 3, y + 3, x + 3, y - 3);
+                break;
+            default:
+                break;
+            }
         }
         painter->restore();
     }

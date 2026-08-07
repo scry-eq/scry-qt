@@ -29,6 +29,9 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
 
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -59,6 +62,9 @@ jobs:
 
       - name: Build
         run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
 
   build-windows:
     name: Windows (Qt6 binaries + protobuf from source)

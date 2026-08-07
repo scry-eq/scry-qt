@@ -21,7 +21,9 @@ struct SpawnRow {
 class SpawnModel : public QAbstractTableModel {
     Q_OBJECT
 public:
-    enum Column { ColName, ColLevel, ColClass, ColRace, ColHP, ColDist,
+    // ColCon is a con-color swatch, mirroring showeq-web's leading dot
+    // column. It has no text and never sorts.
+    enum Column { ColCon, ColName, ColLevel, ColClass, ColRace, ColHP, ColDist,
                   ColX, ColY, ColZ, ColCount };
 
     explicit SpawnModel(QObject* parent = nullptr);
@@ -33,6 +35,8 @@ public:
 
     quint32 spawnIdAt(int row) const;
     quint32 playerId() const { return m_playerId; }
+    // 0 when the player isn't tracked or isn't in this zone's spawn set.
+    quint32 playerLevel() const;
 
 public slots:
     void clear();
@@ -62,5 +66,6 @@ private:
     int  m_dirtyRowMin{INT_MAX};
     int  m_dirtyRowMax{INT_MIN};
     bool m_dirtyAllDistances{false};
+    bool m_dirtyAllCons{false};
     bool m_flushScheduled{false};
 };
