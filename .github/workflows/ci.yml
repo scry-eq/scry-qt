@@ -33,7 +33,7 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: showeq-qt-linux
           path: build/showeq-qt
@@ -101,7 +101,7 @@ jobs:
 
       - name: Cache protobuf install tree
         id: cache-protobuf
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: protobuf-install
           # The msvc tag is what invalidates the tree when the runner's
@@ -150,7 +150,7 @@ jobs:
           Compress-Archive -Path release\* -DestinationPath build\showeq-qt-windows-x64.zip
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: showeq-qt-windows
           path: build/showeq-qt-windows-x64.zip
@@ -202,7 +202,7 @@ jobs:
         run: bash packaging/build-appimage.sh build
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: showeq-qt-appimage
           path: build/showeq-qt-*.AppImage
@@ -217,12 +217,12 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: showeq-qt-appimage
           path: dist
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: showeq-qt-windows
           path: dist-win
