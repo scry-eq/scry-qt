@@ -11,7 +11,7 @@ jobs:
     name: Ubuntu (Qt6, system packages)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -46,7 +46,7 @@ jobs:
       - name: Install git for checkout
         run: dnf install -y git
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -73,10 +73,19 @@ jobs:
     # built from source once and actions/cache'd by tag. vcpkg dropped
     # because (a) Qt6 was 90% of the time and (b) microsoft removed the
     # `x-gha` binary cache backend, so lukka/run-vcpkg rebuilt every run.
+    #
+    # Neither cmake call pins -G: windows-latest moved to Windows Server 2025
+    # + VS 2026 in June 2026, and a hardcoded "Visual Studio 17 2022" then
+    # fails the configure with "could not find any instance of Visual Studio".
+    # CMake's default generator on Windows is the newest installed VS, so
+    # letting it pick tracks the image across the next bump too. Don't re-add
+    # a -G year here. Qt's prebuilt win64_msvc2022_64 (v143) still links
+    # against the v145 toolset — MSVC keeps binary compat from 2015 on, and
+    # the newest linker does the link, which is the direction that's allowed.
     env:
       PROTOBUF_VERSION: v28.3
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -95,7 +104,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: protobuf-install
-          key: protobuf-${{ env.PROTOBUF_VERSION }}-windows-x64-msvc2022
+          # The msvc tag is what invalidates the tree when the runner's
+          # toolchain moves; bump it alongside a VS major on the image.
+          key: protobuf-${{ env.PROTOBUF_VERSION }}-windows-x64-msvc2026
 
       - name: Build protobuf from source
         if: steps.cache-protobuf.outputs.cache-hit != 'true'
@@ -104,7 +115,7 @@ jobs:
             --recurse-submodules --shallow-submodules `
             https://github.com/protocolbuffers/protobuf protobuf-src
           cmake -S protobuf-src -B protobuf-src\build `
-            -G "Visual Studio 17 2022" -A x64 `
+            -A x64 `
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}\protobuf-install" `
             -Dprotobuf_BUILD_TESTS=OFF `
@@ -119,7 +130,7 @@ jobs:
 
       - name: Configure
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A x64 `
+          cmake -B build -A x64 `
             -DCMAKE_PREFIX_PATH="${{ github.workspace }}\protobuf-install" `
             -DCMAKE_BUILD_TYPE=Release
 
@@ -168,7 +179,7 @@ jobs:
             libgl-dev libxkbcommon-dev \
             file desktop-file-utils
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
