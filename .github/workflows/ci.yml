@@ -35,8 +35,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:
-          name: showeq-qt-linux
-          path: build/showeq-qt
+          name: scry-qt-linux
+          path: build/scry-qt
 
   build-fedora:
     name: Fedora (Qt6, dnf)
@@ -144,16 +144,16 @@ jobs:
         # runs on a clean Windows machine.
         run: |
           New-Item -ItemType Directory -Force release | Out-Null
-          Copy-Item build\Release\showeq-qt.exe release\
-          windeployqt release\showeq-qt.exe --release --no-translations `
+          Copy-Item build\Release\scry-qt.exe release\
+          windeployqt release\scry-qt.exe --release --no-translations `
             --no-system-d3d-compiler --no-opengl-sw
-          Compress-Archive -Path release\* -DestinationPath build\showeq-qt-windows-x64.zip
+          Compress-Archive -Path release\* -DestinationPath build\scry-qt-windows-x64.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:
-          name: showeq-qt-windows
-          path: build/showeq-qt-windows-x64.zip
+          name: scry-qt-windows
+          path: build/scry-qt-windows-x64.zip
 
   build-appimage:
     name: AppImage (Debian bookworm)
@@ -204,8 +204,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:
-          name: showeq-qt-appimage
-          path: build/showeq-qt-*.AppImage
+          name: scry-qt-appimage
+          path: build/scry-qt-*.AppImage
 
   publish-rolling:
     name: Publish dev release
@@ -219,18 +219,18 @@ jobs:
     steps:
       - uses: actions/download-artifact@v7
         with:
-          name: showeq-qt-appimage
+          name: scry-qt-appimage
           path: dist
 
       - uses: actions/download-artifact@v7
         with:
-          name: showeq-qt-windows
+          name: scry-qt-windows
           path: dist-win
 
       - name: Stage Windows binary with short SHA
         run: |
-          mv dist-win/showeq-qt-windows-x64.zip \
-             "dist/showeq-qt-${GITHUB_SHA::7}-windows-x64.zip"
+          mv dist-win/scry-qt-windows-x64.zip \
+             "dist/scry-qt-${GITHUB_SHA::7}-windows-x64.zip"
           ls -la dist/
 
       - name: Wipe stale assets on dev release
@@ -254,8 +254,8 @@ jobs:
           name: Dev build
           prerelease: true
           files: |
-            dist/showeq-qt-*-x86_64.AppImage
-            dist/showeq-qt-*-windows-x64.zip
+            dist/scry-qt-*-x86_64.AppImage
+            dist/scry-qt-*-windows-x64.zip
           body: |
             Rolling dev build from the tip of `main`. Asset filenames carry
             the short commit SHA so each build is identifiable.
@@ -269,8 +269,8 @@ jobs:
             Usage:
             ```
             # Linux
-            chmod +x showeq-qt-*-x86_64.AppImage
-            ./showeq-qt-*-x86_64.AppImage
+            chmod +x scry-qt-*-x86_64.AppImage
+            ./scry-qt-*-x86_64.AppImage
 
-            # Windows: extract the zip and run showeq-qt.exe
+            # Windows: extract the zip and run scry-qt.exe
             ```

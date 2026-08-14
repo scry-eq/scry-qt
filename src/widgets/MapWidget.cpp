@@ -257,7 +257,7 @@ void MapWidget::centerOnSpawn(quint32 id) {
 }
 
 // Fallback fill for con-colored glyphs when a level is unknown (either
-// ours or theirs). Palette matches showeq-web's COLOR_BY_TYPE.
+// ours or theirs). Palette matches scry-web's COLOR_BY_TYPE.
 QColor MapWidget::colorForSpawnType(seq::v1::SpawnType type) {
     switch (type) {
     case seq::v1::PC:         return QColor(0x6e, 0xc4, 0xff);
@@ -311,7 +311,7 @@ void MapWidget::drawPlayerMarker(QPainter* painter) {
     painter->restore();
 
     // ===== Pixel-sized dot (viewport coords) =====
-    // White fill + black stroke matches showeq-web (#ffffff / #000000)
+    // White fill + black stroke matches scry-web (#ffffff / #000000)
     // and the legacy Qt client.
     painter->save();
     painter->resetTransform();
@@ -341,7 +341,7 @@ void MapWidget::drawForeground(QPainter* painter, const QRectF& sceneRect) {
     drawPlayerMarker(painter);
 
     // ===== Spawn glyphs =====
-    // Per-type marker glyph, mirroring showeq-web's MapCanvas (which in
+    // Per-type marker glyph, mirroring scry-web's MapCanvas (which in
     // turn ports showeq-c's MapIcons table). NPCs and live PCs carry a
     // con-colored fill; corpses/doors/drops are fixed-color outline
     // glyphs so they read as objects, not threats.
@@ -387,7 +387,7 @@ void MapWidget::drawForeground(QPainter* painter, const QRectF& sceneRect) {
 
         QPen dotPen;
         dotPen.setCapStyle(Qt::RoundCap);
-        dotPen.setWidth(6);  // ~3px radius — matches showeq-web
+        dotPen.setWidth(6);  // ~3px radius — matches scry-web
         for (auto it = npcByColor.constBegin(); it != npcByColor.constEnd(); ++it) {
             dotPen.setColor(QColor::fromRgb(it.key()));
             painter->setPen(dotPen);
@@ -505,8 +505,8 @@ void MapWidget::drawForeground(QPainter* painter, const QRectF& sceneRect) {
 
 // Grid + coord labels overlay. Lines are drawn in scene coords (cosmetic
 // pen → 1px regardless of zoom). Labels are drawn in viewport pixel
-// coords so they stay readable at any zoom level. Mirrors showeq-web's
-// MapCanvas grid rendering (mapcore.cpp:1666 + showeq-web/MapCanvas.tsx).
+// coords so they stay readable at any zoom level. Mirrors scry-web's
+// MapCanvas grid rendering (mapcore.cpp:1666 + scry-web/MapCanvas.tsx).
 void MapWidget::drawBackground(QPainter* painter, const QRectF& sceneRect) {
     QElapsedTimer bgTimer; bgTimer.start();
     QGraphicsView::drawBackground(painter, sceneRect);

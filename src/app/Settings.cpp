@@ -15,7 +15,7 @@ Settings& Settings::instance() {
 }
 
 Settings::Settings()
-    : m_settings("showeq-unofficial", "showeq-qt")
+    : m_settings("scry-eq", "scry-qt")
 {}
 
 QUrl Settings::daemonUrl() const {

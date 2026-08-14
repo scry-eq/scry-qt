@@ -1,10 +1,10 @@
 [Desktop Entry]
 Type=Application
-Name=ShowEQ Qt
+Name=Scry Qt
 GenericName=EverQuest packet viewer (client)
-Comment=Qt6 client that connects to a showeq-daemon over WebSocket
-Exec=showeq-qt
-Icon=showeq-qt
+Comment=Qt6 client that connects to a scry-cpp over WebSocket
+Exec=scry-qt
+Icon=scry-qt
 Categories=Network;
 Terminal=false
 StartupNotify=true

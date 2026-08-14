@@ -2,7 +2,7 @@
 #include <QColor>
 
 // EQ con-color bands, derived from the client's own runtime con table.
-// Mirrors showeq-web/src/ui/concolor.ts and iced-miseru/src/concolor.rs —
+// Mirrors scry-web/src/ui/concolor.ts and iced-miseru/src/concolor.rs —
 // same palette, same bands. Keep all three in sync.
 //
 // Above the player the bands are flat: +1..+5 yellow, +6 and up red. Below

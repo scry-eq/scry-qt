@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build a self-contained showeq-qt-*.AppImage.
+# Build a self-contained scry-qt-*.AppImage.
 #
 # Usage:
 #   packaging/build-appimage.sh [BUILD_DIR]
@@ -14,8 +14,8 @@
 # - For redistributable builds, run this inside an older-glibc container
 #   (e.g. ubuntu:22.04). AppImages are forward-compatible with newer hosts,
 #   not backward-compatible with older ones.
-# - showeq-qt has no pcap / capability requirements; it only opens an outbound
-#   WebSocket to a showeq-daemon, so no setcap or polkit dance is needed.
+# - scry-qt has no pcap / capability requirements; it only opens an outbound
+#   WebSocket to a scry-cpp, so no setcap or polkit dance is needed.
 
 set -euo pipefail
 
@@ -42,8 +42,8 @@ if [[ -z "${VERSION:-}" ]]; then
   fi
 fi
 
-if [[ ! -x "$BUILD_DIR/showeq-qt" ]]; then
-  echo "error: $BUILD_DIR/showeq-qt not found — configure & build first:" >&2
+if [[ ! -x "$BUILD_DIR/scry-qt" ]]; then
+  echo "error: $BUILD_DIR/scry-qt not found — configure & build first:" >&2
   echo "  cmake -S '$SRC_DIR' -B '$BUILD_DIR' && cmake --build '$BUILD_DIR'" >&2
   exit 1
 fi
@@ -84,17 +84,17 @@ run_ld() {
 }
 
 cd "$BUILD_DIR"
-LDAI_OUTPUT="showeq-qt-${VERSION}-${ARCH}.AppImage" run_ld \
+LDAI_OUTPUT="scry-qt-${VERSION}-${ARCH}.AppImage" run_ld \
   --appdir "$APPDIR" \
   --plugin qt \
   --output appimage \
-  --desktop-file "$APPDIR/usr/share/applications/showeq-qt.desktop" \
-  --icon-file    "$APPDIR/usr/share/icons/hicolor/256x256/apps/showeq-qt.png"
+  --desktop-file "$APPDIR/usr/share/applications/scry-qt.desktop" \
+  --icon-file    "$APPDIR/usr/share/icons/hicolor/256x256/apps/scry-qt.png"
 
 # linuxdeploy writes the .AppImage into CWD; move it to OUTPUT_DIR if different.
 if [[ "$BUILD_DIR" != "$OUTPUT_DIR" ]]; then
-  mv -f "$BUILD_DIR/showeq-qt-${VERSION}-${ARCH}.AppImage" "$OUTPUT_DIR/"
+  mv -f "$BUILD_DIR/scry-qt-${VERSION}-${ARCH}.AppImage" "$OUTPUT_DIR/"
 fi
 
 echo
-echo "built: $OUTPUT_DIR/showeq-qt-${VERSION}-${ARCH}.AppImage"
+echo "built: $OUTPUT_DIR/scry-qt-${VERSION}-${ARCH}.AppImage"

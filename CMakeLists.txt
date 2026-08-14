@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(showeq-qt CXX)
+project(scry-qt CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -24,7 +24,7 @@ if(NOT protobuf_FOUND)
   find_package(Protobuf REQUIRED)
 endif()
 
-# --- protobuf (shared schema with showeq-daemon) ----------------------------
+# --- protobuf (shared schema with scry-cpp) ----------------------------
 set(SEQ_PROTO_DIR "${CMAKE_SOURCE_DIR}/proto")
 set(SEQ_PROTO_FILES
   "${SEQ_PROTO_DIR}/seq/v1/events.proto"
@@ -33,7 +33,7 @@ set(SEQ_PROTO_FILES
 
 if(NOT EXISTS "${SEQ_PROTO_DIR}/seq/v1/events.proto")
   message(FATAL_ERROR
-    "showeq-proto submodule is not checked out. Run:\n"
+    "scry-proto submodule is not checked out. Run:\n"
     "  git submodule update --init --recursive")
 endif()
 
@@ -85,17 +85,17 @@ set(SOURCES
   src/widgets/SpellListWidget.cpp
   src/widgets/MessageWindow.cpp
   src/widgets/NetworkDiagWidget.cpp
-  resources/showeq-qt.qrc
+  resources/scry-qt.qrc
 )
 
-add_executable(showeq-qt ${SOURCES})
+add_executable(scry-qt ${SOURCES})
 
-target_include_directories(showeq-qt PRIVATE
+target_include_directories(scry-qt PRIVATE
   "${CMAKE_SOURCE_DIR}/src"
   "${SEQ_PROTO_GEN_DIR}"
 )
 
-target_link_libraries(showeq-qt PRIVATE
+target_link_libraries(scry-qt PRIVATE
   seq-proto
   Qt6::Core
   Qt6::Gui
@@ -105,7 +105,7 @@ target_link_libraries(showeq-qt PRIVATE
 
 # On Windows set the executable subsystem to Windows (no console window).
 if(WIN32)
-  set_target_properties(showeq-qt PROPERTIES WIN32_EXECUTABLE TRUE)
+  set_target_properties(scry-qt PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 
 # --- tests ------------------------------------------------------------------
@@ -123,11 +123,11 @@ endif()
 
 # --- install rules (used by .deb CPack and AppImage packaging) --------------
 include(GNUInstallDirs)
-install(TARGETS showeq-qt RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS scry-qt RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 if(UNIX AND NOT APPLE)
-  install(FILES   packaging/showeq-qt.desktop
+  install(FILES   packaging/scry-qt.desktop
           DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
-  install(FILES   packaging/showeq-qt.png
+  install(FILES   packaging/scry-qt.png
           DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps)
 endif()
 
@@ -139,20 +139,20 @@ if(UNIX AND NOT APPLE)
     COMMAND ${CMAKE_COMMAND} -E env
             "VERSION=${CPACK_PACKAGE_VERSION}"
             bash ${CMAKE_SOURCE_DIR}/packaging/build-appimage.sh ${CMAKE_BINARY_DIR}
-    DEPENDS showeq-qt
+    DEPENDS scry-qt
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     USES_TERMINAL
-    COMMENT "Building showeq-qt AppImage")
+    COMMENT "Building scry-qt AppImage")
 endif()
 
 # --- CPack ------------------------------------------------------------------
-set(CPACK_PACKAGE_NAME "showeq-qt")
+set(CPACK_PACKAGE_NAME "scry-qt")
 set(CPACK_PACKAGE_VERSION "0.1.0")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "ShowEQ Qt6 Client")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Scry Qt6 Client")
 if(WIN32)
   set(CPACK_GENERATOR "NSIS")
 elseif(UNIX)
   set(CPACK_GENERATOR "DEB")
-  set(CPACK_DEBIAN_PACKAGE_MAINTAINER "showeq-unofficial")
+  set(CPACK_DEBIAN_PACKAGE_MAINTAINER "scry-eq")
 endif()
 include(CPack)

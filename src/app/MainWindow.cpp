@@ -24,7 +24,7 @@
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
 {
-    setWindowTitle("ShowEQ Qt");
+    setWindowTitle("Scry Qt");
     resize(1280, 800);
 
     m_conn        = new DaemonConnection(this);
@@ -158,7 +158,7 @@ void MainWindow::onZoneChanged(const QString& zoneShort, const QString& /*zoneLo
 }
 
 void MainWindow::updateTitle() {
-    QString title = "ShowEQ Qt";
+    QString title = "Scry Qt";
     if (!m_zoneShort.isEmpty())
         title += " — " + m_zoneShort;
     if (!m_connected)

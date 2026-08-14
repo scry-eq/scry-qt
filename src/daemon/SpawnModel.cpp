@@ -14,7 +14,7 @@ static const char* kClassNames[] = {
 };
 static const int kClassCount = static_cast<int>(sizeof(kClassNames)/sizeof(kClassNames[0]));
 
-// Race-name table from showeq-daemon/src/races.h (mirrored verbatim).
+// Race-name table from scry-cpp/src/races.h (mirrored verbatim).
 // Sparse: indices without an entry default to NULL → fall back to a
 // numeric string in raceName().
 static const char* kRaceNames[] = {
@@ -28,7 +28,7 @@ static QString raceName(uint32_t race) {
     return QString::number(race);
 }
 
-// Con swatch, mirroring showeq-web's 10px ring-bordered dot. Cached per
+// Con swatch, mirroring scry-web's 10px ring-bordered dot. Cached per
 // band — data() is called for every visible cell on every repaint, and
 // painting a fresh pixmap each time would be pure waste.
 // QImage rather than QPixmap: the cache outlives QApplication, and a
@@ -128,7 +128,7 @@ QVariant SpawnModel::data(const QModelIndex& index, int role) const {
         case ColZ:     return QString::number(r.z, 'f', 1);
         }
     }
-    // Con swatch. Matches showeq-web, where the leading dot carries the
+    // Con swatch. Matches scry-web, where the leading dot carries the
     // con and the row text stays neutral — type is read off the Class
     // column and the map glyph, not the text color.
     if (role == Qt::DecorationRole && index.column() == ColCon)

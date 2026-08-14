@@ -1,5 +1,5 @@
 // Pins the con bands against the client's runtime con table. The same
-// cases are asserted in showeq-web/src/ui/concolor.test.ts and
+// cases are asserted in scry-web/src/ui/concolor.test.ts and
 // iced-miseru/src/concolor.rs — keep the three in sync.
 #include "util/ConColor.h"
 #include <QTest>

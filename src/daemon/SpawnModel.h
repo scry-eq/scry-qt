@@ -21,7 +21,7 @@ struct SpawnRow {
 class SpawnModel : public QAbstractTableModel {
     Q_OBJECT
 public:
-    // ColCon is a con-color swatch, mirroring showeq-web's leading dot
+    // ColCon is a con-color swatch, mirroring scry-web's leading dot
     // column. It has no text and never sorts.
     enum Column { ColCon, ColName, ColLevel, ColClass, ColRace, ColHP, ColDist,
                   ColX, ColY, ColZ, ColCount };
