@@ -62,4 +62,4 @@ packaging/                # AppImage build driver + assets
 
 ## License
 
-No `LICENSE` file is checked in yet.
+MIT. See [LICENSE](LICENSE).
